@@ -88,8 +88,19 @@ cd $MNT/boot
 sudo mv boot.scr boot.scr.orig
 sudo mkimage -A arm64 -T script -n pinephone -d ../../boot.txt boot.scr
 sudo ln -s board-1.1.dtb sun50i-a64-pinephone.dtb
-cd ../..
+cd ..
 
+# Pin the kernel to avoid bricking on update
+echo "Package: linux-image-librem5
+Pin: version 5.*
+Pin-Priority: -1
+
+Package: linux-image-5.*-librem5
+Pin: origin \"repo.pureos.net\"
+Pin-Priority: -1" > ../pin-kernel.pref
+sudo cp ../pin-kernel.pref etc/apt/preferences.d/
+
+cd ..
 sudo umount -R $MNT
 sudo losetup -d $LO
 

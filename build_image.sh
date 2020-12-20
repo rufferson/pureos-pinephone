@@ -68,14 +68,17 @@ dd if=u-boot-sunxi-with-spl.bin of=$SYS_IMG bs=8k seek=1 conv=notrunc
 # 
 MNT=sd
 test -d sd || mkdir sd
-LO=`losetup -f`
+LO=`sudo losetup -f`
 sudo losetup -P $LO $SYS_IMG
 sudo mount ${LO}p2 $MNT
 sudo mount ${LO}p1 $MNT/boot
 
 sudo tar xf pp.tar.gz -C $MNT/boot --strip-components=1 --exclude=modules --exclude=headers
+sudo chown 0:0 -R $MNT/boot/
 sudo tar xf pp.tar.gz -C $MNT/lib/modules --strip-components=4 --wildcards '*/lib/modules/*'
+sudo chown 0:0 -R $MNT/lib/modules/
 sudo tar xf pp.tar.gz -C $MNT/usr/src/ --strip-components=1 --wildcards '*/headers/*'
+sudo chown 0:0 -R $MNT/usr/src/
 
 echo "setenv bootargs root=/dev/mmcblk0p2 rootwait console=ttyS0,115200 loglevel=7 panic=10
 load mmc 0:1 \$kernel_addr_r Image

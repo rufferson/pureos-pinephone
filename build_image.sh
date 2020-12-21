@@ -12,12 +12,12 @@ PINE_LINUX_REPO='https://gitlab.com/pine64-org/linux'
 PINE_LINUX_BRANCH='pine64-kernel-5.5.y'
 
 LIBREM5_CI='https://arm01.puri.sm/job/Images/job/Image%20Build/api/xml'
-LIBREM5_IMG='librem5r3'
-CI_FILTER="contains(description,%20%27$LIBREM5_IMG%27)%20and%20contains(result,%20%27SUCCESS%27)"
+LIBREM5_IMG='librem5r4'
+CI_FILTER="contains(description,%20%27$LIBREM5_IMG%20byzantium%27)%20and%20contains(result,%20%27SUCCESS%27)"
 
 SYS_IMG="$LIBREM5_IMG.img"
 
-KERNEL_URL='https://xff.cz/kernels/5.9/pp.tar.gz'
+KERNEL_URL='https://xff.cz/kernels/5.10/pp.tar.gz'
 
 fetch_system() {
   LAST=$(curl -sg "$LIBREM5_CI?depth=1&xpath=//build[$CI_FILTER][1]/url[text()]" | sed 's/<[^>]\+>//g')

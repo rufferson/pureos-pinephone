@@ -17,7 +17,7 @@ CI_FILTER="contains(description,%20%27$LIBREM5_IMG%20byzantium%27)%20and%20conta
 
 SYS_IMG="$LIBREM5_IMG.img"
 
-KERNEL_URL='https://xff.cz/kernels/5.10/pp.tar.gz'
+KERNEL_URL='https://xff.cz/kernels/5.11/pp.tar.gz'
 
 fetch_system() {
   LAST=$(curl -sg "$LIBREM5_CI?depth=1&xpath=//build[$CI_FILTER][1]/url[text()]" | sed 's/<[^>]\+>//g')

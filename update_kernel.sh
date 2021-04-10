@@ -1,7 +1,7 @@
 #!/bin/bash
 set -ex
 
-KERNEL_URL="https://xff.cz/kernels/5.11/pp.tar.gz"
+KERNEL_URL="https://xff.cz/kernels/5.12/pp.tar.gz"
 CMD='wget -c '
 if command -v curl ; then
 CMD='curl -C - -O '

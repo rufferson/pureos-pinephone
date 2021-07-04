@@ -4,7 +4,8 @@ set -ex
 
 #GIT_URL_ATF='https://github.com/ARM-software/arm-trusted-firmware.git'
 #GIT_URL_UBM='https://gitlab.denx.de/u-boot/u-boot.git'
-GIT_URL_ATF='https://megous.com/git/atf'
+GIT_URL_ATF='https://github.com/crust-firmware/arm-trusted-firmware.git'
+#GIT_URL_ATF='https://megous.com/git/atf'
 GIT_URL_UBM='https://megous.com/git/u-boot'
 #GIT_URL_PBP='https://megous.com/git/p-boot'
 #GIT_URL_UBP='https://gitlab.com/pine64-org/u-boot.git'
@@ -22,11 +23,22 @@ KERNEL_URL='https://xff.cz/kernels/5.12/pp.tar.gz'
 fetch_system() {
   LAST=$(curl -sg "$LIBREM5_CI?depth=1&xpath=//build[$CI_FILTER][1]/url[text()]" | sed 's/<[^>]\+>//g')
   IMG_URL="$LAST/artifact/$SYS_IMG.xz"
-  curl $IMG_URL -O -C - &
+  rc=1
+  while [ $rc -ne 0 ]; do
+    if curl $IMG_URL -O -C -; then
+      rc=0
+    else
+      rc=1
+    fi
+  done
 }
 fetch_kernel() {
-  curl -O "$KERNEL_URL" -C - &
-  #curl "$PINE_LINUX_REPO/-/jobs/artifacts/$PINE_LINUX_BRANCH/download?job=build" > pine64-linux.zip &
+  rc=1
+  while [ $rc -ne 0 ]; do
+      curl -O "$KERNEL_URL" -C -
+      rc=$?
+  done
+  #curl "$PINE_LINUX_REPO/-/jobs/artifacts/$PINE_LINUX_BRANCH/download?job=build" > pine64-linux.zip
   #unzip -d pine64-linux pine64-linux.zip
   #ar x $(ls -1 pine64-linux/linux-image-*_arm64.deb|grep -v dbg) data.tar.xz
 
@@ -52,8 +64,8 @@ build_uboot() {
 }
 
 ### START ###
-fetch_system
-fetch_kernel
+fetch_system &
+fetch_kernel &
 
 if [ "x$UBOOT_BIN" = "x" ]
 then
@@ -70,7 +82,16 @@ MNT=sd
 test -d sd || mkdir sd
 LO=`sudo losetup -f`
 sudo losetup -P $LO $SYS_IMG
-sudo mount ${LO}p2 $MNT
+ROOT_DEV=${LO}p2
+
+if sudo cryptsetup isLuks $ROOT_DEV
+then
+  echo -n 123456 > k
+  sudo cryptsetup open $ROOT_DEV pureos-l5 -d k
+  ROOT_DEV=/dev/mapper/pureos-l5
+  rm -f k
+fi
+sudo mount $ROOT_DEV $MNT
 sudo mount ${LO}p1 $MNT/boot
 
 sudo tar xf pp.tar.gz -C $MNT/boot --strip-components=1 --exclude=modules --exclude=headers
@@ -105,6 +126,10 @@ sudo cp ../pin-kernel.pref etc/apt/preferences.d/
 
 cd ..
 sudo umount -R $MNT
+if [ $ROOT_DEV = "/dev/mapper/pureos-l5" ]
+then
+  sudo cryptsetup close $ROOT_DEV
+fi
 sudo losetup -d $LO
 
 [ "x$1" = "x" ] && rm $SYS_IMG.xz

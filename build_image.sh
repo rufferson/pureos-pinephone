@@ -1,5 +1,14 @@
 #!/bin/bash
 #
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# If you want to recover runtime you may need to run the below commands
+# sudo umount -R sd
+# sudo cryptsetup close pureos-l5
+# sudo losetup -d /dev/loop0
+# sudo rm -rf ./ramfs/
+# rm sd
+
 set -ex
 
 #GIT_URL_ATF='https://github.com/ARM-software/arm-trusted-firmware.git'
@@ -101,16 +110,44 @@ sudo chown 0:0 -R $MNT/lib/modules/
 sudo tar xf pp.tar.gz -C $MNT/usr/src/ --strip-components=1 --wildcards '*/headers/*'
 sudo chown 0:0 -R $MNT/usr/src/
 
-echo "setenv bootargs root=/dev/mmcblk0p2 rootwait console=ttyS0,115200 loglevel=7 panic=10
+#echo "setenv bootargs root=/dev/mmcblk0p2 rootwait console=ttyS0,115200 loglevel=7 panic=10
+# Let ramfs handle the rootfs now
+echo "setenv bootargs console=ttyS0,115200 loglevel=7 panic=10
 load mmc 0:1 \$kernel_addr_r Image
 load mmc 0:1 \$fdt_addr_r sun50i-a64-pinephone.dtb
-#load mmc 0:1 \$ramdisk_addr_r initrd.uimg &&
-#booti \$kernel_addr_r \$ramdisk_addr_r \$fdt_addr_r
-booti \$kernel_addr_r - \$fdt_addr_r" > boot.txt
+load mmc 0:1 \$ramdisk_addr_r initrd.uimg &&
+booti \$kernel_addr_r \$ramdisk_addr_r \$fdt_addr_r
+#booti \$kernel_addr_r - \$fdt_addr_r" > boot.txt
+
+#zcat sd/boot/initrd.img |  lz4 -zcl  > initrd.lz4
+## Rebuild initrd to add required drivers
+rm -rf ramfs
+mkdir ramfs
+cd ramfs
+bsdtar xf ../sd/boot/initrd.img
+# add swrast mesa driver
+ln -s etnaviv_dri.so usr/lib/aarch64-linux-gnu/dri/kms_swrast_dri.so
+# remove l5 kernel modules
+rm -rf lib/modules/*-librem5
+# add touchscreen driver instead
+cd ../sd/
+find lib/modules/  -path '*-librem5' -prune -o -name goodix.ko -print0 -o -name 'modules.*.bin' | bsdtar -cf - -T - --null | bsdtar -xf - -C ../ramfs/usr/
+cd ../ramfs
+#echo "insmod /$(find lib/modules/ -name goodix.ko -print -quit)" >> scripts/init-premount/plymouth
+echo goodix > conf/modules
+# repack initrd
+find . -mindepth 1 -printf '%P\0' | sort -z | bsdtar --null -cnf - -T - --format=newc --gid=0 --uid=0 | lz4 -c9l > ../initrd.lz4
+cd ..
+sudo rm -rf ./ramfs
 
 cd $MNT/boot
 sudo mv boot.scr boot.scr.orig
 sudo mkimage -A arm64 -T script -n pinephone -d ../../boot.txt boot.scr
+
+# this does not work because: we need lz4, swrast and goodix, see above
+#sudo mkimage -A arm64 -T ramdisk -n pinephone -d initrd.img initrd.uimg
+sudo mkimage -A arm64 -T ramdisk -n pinephone -d ../../initrd.lz4 initrd.uimg -C lz4
+
 sudo ln -s board-1.1.dtb sun50i-a64-pinephone.dtb
 cd ..
 

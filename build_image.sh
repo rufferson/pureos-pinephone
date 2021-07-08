@@ -131,7 +131,7 @@ ln -s etnaviv_dri.so usr/lib/aarch64-linux-gnu/dri/kms_swrast_dri.so
 rm -rf lib/modules/*-librem5
 # add touchscreen driver instead
 cd ../sd/
-find lib/modules/  -path '*-librem5' -prune -o -name goodix.ko -print0 -o -name 'modules.*.bin' | bsdtar -cf - -T - --null | bsdtar -xf - -C ../ramfs/usr/
+find lib/modules/ -path '*-librem5' -prune -o -name goodix.ko -print0 -o -name 'modules.*.bin' -print0 | bsdtar -cf - -T - --null | bsdtar -xf - -C ../ramfs/usr/
 cd ../ramfs
 #echo "insmod /$(find lib/modules/ -name goodix.ko -print -quit)" >> scripts/init-premount/plymouth
 echo goodix > conf/modules
